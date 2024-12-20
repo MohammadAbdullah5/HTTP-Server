@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard</title>
+    <script>
+        function sendRequest(method, url, body = null) {
+            const xhr = new XMLHttpRequest();
+            xhr.open(method, url, true);
+            xhr.setRequestHeader('Content-Type', 'text/plain');
+            xhr.onload = function () {
+                if (xhr.status >= 200 && xhr.status < 300) {
+                    document.getElementById('response').textContent = xhr.responseText;
+                } else {
+                    document.getElementById('response').textContent = 'Error: ' + xhr.statusText;
+                }
+            };
+            xhr.send(body);
+        }
+
+        function handleGet() {
+            const file = document.getElementById('get-file').value;
+            sendRequest('GET', '/?file=' + file);
+        }
+
+        function handlePut() {
+            const file = document.getElementById('put-file').value;
+            const content = document.getElementById('put-content').value;
+            sendRequest('PUT', '/?file=' + file, content);
+        }
+
+        function handleDelete() {
+            const file = document.getElementById('delete-file').value;
+            sendRequest('DELETE', '/?file=' + file);
+        }
+
+        function handlePost() {
+            const file = document.getElementById('post-file').value;
+            const content = document.getElementById('post-content').value;
+            const url = '/?file=' + file;
+            sendRequest('POST', url, content);
+        }
+    </script>
+</head>
+<body>
+    <h1>Dashboard</h1>
+
+    <h2>GET Request</h2>
+    <label for="get-file">Enter file name: </label>
+    <input type="text" id="get-file">
+    <button onclick="handleGet()">Send GET Request</button>
+
+    <h2>PUT Request</h2>
+    <label for="put-file">Enter file name: </label>
+    <input type="text" id="put-file">
+    <br>
+    <label for="put-content">Enter content to update: </label>
+    <textarea id="put-content"></textarea>
+    <button onclick="handlePut()">Send PUT Request</button>
+
+    <h2>DELETE Request</h2>
+    <label for="delete-file">Enter file name to delete: </label>
+    <input type="text" id="delete-file">
+    <button onclick="handleDelete()">Send DELETE Request</button>
+
+    <h2>POST Request</h2>
+    <label for="post-file">Enter file name: </label>
+    <input type="text" id="post-file">
+    <br>
+    <label for="post-content">Enter content to save: </label>
+    <textarea id="post-content"></textarea>
+    <button onclick="handlePost()">Send POST Request</button>
+
+    <h2>Response</h2>
+    <pre id="response"></pre>
+</body>
+</html>

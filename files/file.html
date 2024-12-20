@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>File Upload and Download</title>
+    <script>
+        // Function to send requests (both GET and POST)
+        function sendRequest(method, url, body = null) {
+            const xhr = new XMLHttpRequest();
+            xhr.open(method, url, true);
+            xhr.setRequestHeader('Content-Type', 'text/plain');
+            xhr.onload = function () {
+                if (xhr.status >= 200 && xhr.status < 300) {
+                    document.getElementById('response').textContent = xhr.responseText;
+                } else {
+                    document.getElementById('response').textContent = 'Error: ' + xhr.statusText;
+                }
+            };
+            xhr.send(body);
+        }
+
+        // Handle the file upload
+        function handleUpload() {
+            const form = document.getElementById('upload-form');
+            const formData = new FormData(form);
+            const xhr = new XMLHttpRequest();
+            xhr.open('POST', '/upload', true);
+            xhr.onload = function () {
+                if (xhr.status >= 200 && xhr.status < 300) {
+                    document.getElementById('response').textContent = xhr.responseText;
+                } else {
+                    document.getElementById('response').textContent = 'Error: ' + xhr.statusText;
+                }
+            };
+            xhr.send(formData);
+        }
+
+        // Handle the file download (GET request)
+        function handleDownload() {
+            const fileName = document.getElementById('download-file').value;
+            const xhr = new XMLHttpRequest();
+            xhr.open('GET', '/download?file=' + encodeURIComponent(fileName), true);
+            xhr.onload = function () {
+                if (xhr.status >= 200 && xhr.status < 300) {
+                    // Create a temporary link to download the file
+                    const link = document.createElement('a');
+                    link.href = window.URL.createObjectURL(xhr.response);
+                    link.download = fileName;
+                    link.click();
+                    document.getElementById('response').textContent = 'File downloaded successfully.';
+                } else {
+                    document.getElementById('response').textContent = 'Error: ' + xhr.statusText;
+                }
+            };
+            xhr.responseType = 'blob';  // Expecting binary data (file)
+            xhr.send();
+        }
+    </script>
+</head>
+<body>
+    <h1>File Upload and Download</h1>
+
+    <!-- File Upload Section -->
+    <h2>File Upload</h2>
+    <form id="upload-form" enctype="multipart/form-data">
+        <label for="file">Choose a file to upload:</label>
+        <input type="file" id="file" name="file" required><br><br>
+        <button type="button" onclick="handleUpload()">Upload File</button>
+    </form>
+
+    <!-- File Download Section -->
+    <h2>File Download</h2>
+    <label for="download-file">Enter the filename to download:</label>
+    <input type="text" id="download-file" required><br><br>
+    <button type="button" onclick="handleDownload()">Download File</button>
+
+    <h2>Response</h2>
+    <pre id="response"></pre>
+</body>
+</html>
