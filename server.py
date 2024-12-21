@@ -314,7 +314,6 @@ def generate_response(request):
 def sniff_packets():
     def packet_callback(packet):
         if packet.haslayer(scapy.Raw):
-            return
             log_packet_info(packet)
     
     # Sniff network packets in a separate thread

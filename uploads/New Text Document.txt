@@ -1,0 +1,2 @@
+Best Params for LGBMClassifier: {'learning_rate': 0.01, 'max_depth': 10, 'n_estimators': 200, 'num_leaves': 31}
+Best Score: 0.7204819277108434
