@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HTTP Server Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f9;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: #fff;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+        }
+        h1 {
+            font-size: 24px;
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+        }
+        input, button {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        button {
+            background: #28a745;
+            color: white;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #218838;
+        }
+        .response {
+            margin-top: 20px;
+            padding: 10px;
+            background: #e9ecef;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>HTTP Server Test</h1>
+        <form id="authForm">
+            <label for="username">Username</label>
+            <input type="text" id="username" placeholder="Enter username" required>
+            
+            <label for="password">Password</label>
+            <input type="password" id="password" placeholder="Enter password" required>
+            
+            <button type="button" onclick="makeRequest()">Send Authenticated Request</button>
+        </form>
+        
+        <div class="response" id="response">
+            Response will appear here.
+        </div>
+    </div>
+
+    <script>
+        async function makeRequest() {
+            const username = document.getElementById("username").value;
+            const password = document.getElementById("password").value;
+
+            // Encode credentials in Base64
+            const credentials = btoa(`${username}:${password}`);
+
+            try {
+                const response = await fetch('http://127.0.0.1:8080/protected-resource', {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Basic ${credentials}`
+                    }
+                });
+
+                const text = await response.text();
+                document.getElementById("response").textContent = 
+                    `Status: ${response.status}\n\n${text}`;
+            } catch (error) {
+                document.getElementById("response").textContent = 
+                    `Error: ${error.message}`;
+            }
+        }
+    </script>
+</body>
+</html>

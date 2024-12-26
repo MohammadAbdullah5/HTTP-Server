@@ -6,9 +6,13 @@
     <title>Dashboard</title>
     <script>
         function sendRequest(method, url, body = null) {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const authHeader = 'Basic ' + btoa(username + ':' + password);
             const xhr = new XMLHttpRequest();
             xhr.open(method, url, true);
             xhr.setRequestHeader('Content-Type', 'text/plain');
+            xhr.setRequestHeader('Authorization', authHeader);
             xhr.onload = function () {
                 if (xhr.status >= 200 && xhr.status < 300) {
                     document.getElementById('response').textContent = xhr.responseText;
@@ -45,7 +49,12 @@
 </head>
 <body>
     <h1>Dashboard</h1>
-
+    <h2>Authentication</h2>
+    <label for="username">Username: </label>
+    <input type="text" id="username">
+    <br>
+    <label for="password">Password: </label>
+    <input type="password" id="password">
     <h2>GET Request</h2>
     <label for="get-file">Enter file name: </label>
     <input type="text" id="get-file">

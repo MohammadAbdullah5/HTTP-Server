@@ -1,5 +1,5 @@
 import tkinter as tk
-from tkinter import messagebox, scrolledtext
+from tkinter import filedialog, messagebox, scrolledtext
 import threading
 from scapy.all import sniff, Raw
 import scapy.all as scapy
@@ -7,6 +7,8 @@ import socket
 import os
 import mimetypes
 import urllib
+import csv
+import base64
 
 class ModernHTTPServerGUI:
 
@@ -42,18 +44,29 @@ class ModernHTTPServerGUI:
         self.port_entry.grid(row=0, column=1, padx=10, pady=10, sticky="w")
 
         # Buttons
-        self.start_button = tk.Button(input_button_frame, text="Start Server", command=self.start_server, **self.button_style, width=15)
+        button_frame = tk.Frame(root, bg="#212121")
+        button_frame.grid(row=1, column=0, columnspan=4, padx=20, pady=10, sticky="ew")
+        self.start_button = tk.Button(button_frame, text="Start Server", command=self.start_server, **self.button_style, width=15)
         self.start_button.grid(row=1, column=0, padx=10, pady=10)
 
-        self.stop_button = tk.Button(input_button_frame, text="Stop Server", command=self.stop_server, state="disabled", **self.button_style, width=15)
+        self.stop_button = tk.Button(button_frame, text="Stop Server", command=self.stop_server, state="disabled", **self.button_style, width=15)
         self.stop_button.grid(row=1, column=1, padx=10, pady=10)
 
-        self.toggle_button = tk.Button(input_button_frame, text="Hide Output", command=self.toggle_output, **self.button_style, width=15)
-        self.toggle_button.grid(row=1, column=2, padx=10, pady=10)
+        self.add_file_button = tk.Button(button_frame, text="Add File", command=self.add_file_to_server, **self.button_style, width=15)
+        self.add_file_button.grid(row=1, column=2, padx=10, pady=10)
 
-        self.log_toggle_button = tk.Button(input_button_frame, text="Hide Logs", command=self.toggle_logs, **self.button_style, width=15)
-        self.log_toggle_button.grid(row=1, column=3, padx=10, pady=10)
+        self.toggle_button = tk.Button(button_frame, text="Hide Output", command=self.toggle_output, **self.button_style, width=15)
+        self.toggle_button.grid(row=1, column=3, padx=10, pady=10)
 
+        self.log_toggle_button = tk.Button(button_frame, text="Hide Logs", command=self.toggle_logs, **self.button_style, width=15)
+        self.log_toggle_button.grid(row=1, column=4, padx=10, pady=10)
+
+        button_frame.grid_columnconfigure(0, weight=1)  # Add weight to center align
+        button_frame.grid_columnconfigure(1, weight=1)  # Add weight to center align
+        button_frame.grid_columnconfigure(2, weight=1)  # Add weight to center align
+        button_frame.grid_columnconfigure(3, weight=1)  # Add weight to center align
+        button_frame.grid_columnconfigure(4, weight=1)  # Add weight to center align
+        button_frame.grid_columnconfigure(5, weight=1)
         # Output Box
         self.output_frame = tk.LabelFrame(root, text="Server Output", bg="#212121", fg="#FFFFFF", font=("Helvetica", 12, "bold"))
         self.output_frame.grid(row=2, column=0, columnspan=4, padx=20, pady=10, sticky="nsew")
@@ -62,16 +75,16 @@ class ModernHTTPServerGUI:
                                                      font=("Consolas", 12), state="disabled", insertbackground="#FFFFFF")
         self.output_text.pack(fill="both", expand=True)
 
-        # Backend Log Box (Smaller)
+        # Backend Log Box 
         self.backend_frame = tk.LabelFrame(root, text="Backend Logs", bg="#212121", fg="#FFFFFF", font=("Helvetica", 12, "bold"))
         self.backend_frame.grid(row=3, column=0, columnspan=4, padx=20, pady=10, sticky="nsew")
 
         self.backend_text = scrolledtext.ScrolledText(self.backend_frame, wrap="word", bg="#2C2C2C", fg="#FFFFFF",
-                                                      font=("Consolas", 10), state="disabled", height=6, insertbackground="#FFFFFF")
+                                                      font=("Consolas", 10), state="disabled", height=18, insertbackground="#FFFFFF")
         self.backend_text.pack(fill="both", expand=True)
 
         # Grid configuration
-        self.root.grid_rowconfigure(2, weight=2)  # More weight for output
+        self.root.grid_rowconfigure(2, weight=1)  # More weight for output
         self.root.grid_rowconfigure(3, weight=1)  # Less weight for backend logs
         self.root.grid_columnconfigure(0, weight=1)
 
@@ -88,6 +101,27 @@ class ModernHTTPServerGUI:
             self.output_frame.grid()
             self.toggle_button.config(text="Hide Output")
         self.output_visible = not self.output_visible
+
+    def add_file_to_server(self):
+        file_path = filedialog.askopenfilename(title="Select a file to upload")
+        if file_path:
+            try:
+                server_directory = "./uploads"  # Directory to store files
+                os.makedirs(server_directory, exist_ok=True)
+
+                file_name = os.path.basename(file_path)
+                destination_path = os.path.join(server_directory, file_name)
+                
+                with open(file_path, 'rb') as source_file:
+                    with open(destination_path, 'wb') as dest_file:
+                        dest_file.write(source_file.read())
+
+                self.log_message(f"File '{file_name}' added to the server directory.")
+            except Exception as e:
+                messagebox.showerror("Error", f"Failed to add file: {e}")
+        else:
+            self.log_message("File selection was cancelled.")
+
 
     def toggle_logs(self):
         if self.logs_visible:
@@ -142,9 +176,6 @@ class ModernHTTPServerGUI:
 
     # Main function to run the HTTP server and capture packets
     def run_server(self, host='127.0.0.1', port=8080):
-        """
-        Runs an HTTP server and starts packet sniffing in a separate thread.
-        """
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         try:
             self.server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -187,9 +218,6 @@ class ModernHTTPServerGUI:
 
     # Function to handle sniffing of network packets
     def sniff_packets(self, port):
-        """
-        Sniffs network packets and logs packet details when detected.
-        """
         try:
             def packet_callback(packet):
                 if packet.haslayer(scapy.Raw):
@@ -206,10 +234,41 @@ class ModernHTTPServerGUI:
         except Exception as e:
             self.backend_log_message(f"(sniff_packets): Error during sniffing: {e}")
 
+    def validate_auth(self, headers):
+        auth_header = headers.get("Authorization")
+        if not auth_header or not auth_header.startswith("Basic "):
+            self.backend_log_message("(validate_auth): Missing or invalid Authorization header.")
+            return False, None
+
+        # Decode the Base64 encoded credentials
+        try:
+            encoded_credentials = auth_header.split("Basic ")[1]
+            decoded_credentials = base64.b64decode(encoded_credentials).decode('utf-8')
+            username, password = decoded_credentials.split(":", 1)
+        except Exception as e:
+            self.backend_log_message(f"(validate_auth): Error decoding credentials: {e}")
+            return False, None
+
+        # Validate against the users.csv file
+        try:
+            with open("./users.csv", "r") as file:
+                csv_reader = csv.DictReader(file)
+                for row in csv_reader:
+                    if row["username"] == username and row["password"] == password:
+                        self.backend_log_message(f"(validate_auth): User '{username}' authenticated successfully.")
+                        return True, row["role"]  # Return role for authorization purposes
+        except FileNotFoundError:
+            self.backend_log_message("(validate_auth): users.csv file not found.")
+            return False, None
+        except Exception as e:
+            self.backend_log_message(f"(validate_auth): Error reading users.csv: {e}")
+            return False, None
+
+        self.backend_log_message(f"(validate_auth): Authentication failed for user '{username}'.")
+        return False, None
+
+
     def handle_client(self, client_socket):
-        """
-        Handles HTTP client requests and sends a response.
-        """
         try:
             request = self.receive_request(client_socket)
             if request:
@@ -237,15 +296,6 @@ class ModernHTTPServerGUI:
     # Helper function to serve static files
         
     def serve_static_file(self, filepath):
-        """
-        Serve static files to the client.
-
-        Args:
-            filepath (str): The full path to the file to be served.
-
-        Returns:
-            bytes: The HTTP response containing the file data or an error response.
-        """
         if not os.path.exists(filepath):
             # Log and notify about missing file
             self.backend_log_message(f"(serve_static_file): File not found: {filepath} -> HTTP/1.1 404 Not Found")
@@ -283,12 +333,6 @@ class ModernHTTPServerGUI:
     # Log the packet information at each layer dynamically
 
     def log_packet_info(self, packet):
-        """
-        Log dynamic packet analysis details across different OSI layers.
-
-        Args:
-            packet: The packet to analyze (scapy packet object).
-        """
         print("\n--- Dynamic Packet Analysis ---")
         self.log_message("\n--- Dynamic Packet Analysis ---")
 
@@ -364,16 +408,6 @@ class ModernHTTPServerGUI:
 
 
     def parse_multipart_form_data(self, body, boundary):
-        """
-        Parse multipart form data and extract files.
-
-        Args:
-            body (str or bytes): The raw body of the HTTP request.
-            boundary (str): The boundary string separating parts of the multipart form data.
-
-        Returns:
-            dict: A dictionary with the extracted files, where the key is the field name and the value is a tuple (filename, file_data).
-        """
         # Decode body if in bytes format
         if isinstance(body, bytes):
             self.backend_log_message(f"(parse_multipart_form_data): Decoding body from bytes to string.")
@@ -409,15 +443,6 @@ class ModernHTTPServerGUI:
 
 
     def serve_file(self, file_name):
-        """
-        Serve a file to the client.
-
-        Args:
-            file_name (str): The name of the file to serve.
-
-        Returns:
-            bytes: The HTTP response containing the file data or an error response.
-        """
         file_path = os.path.join('uploads', file_name)
         if not os.path.exists(file_path):
             self.backend_log_message(f"(serve_file): File not found: {file_path}")
@@ -448,17 +473,18 @@ class ModernHTTPServerGUI:
                 "Content-Length: 0\r\n\r\n"
             ).encode('utf-8')
 
-            
+    def check_permissions(self, user, resource, method):
+        # Example logic: Adjust this to your actual permission model
+        permissions = {
+            "user": {"GET": ["/*"]},
+            "admin": {"GET": ["/*"], "POST": ["/*"], "PUT": ["/*"], "DELETE": ["/*"]}
+        }
+        user_permissions = permissions.get(user, {})
+        allowed_resources = user_permissions.get(method, [])
+        return resource in allowed_resources or "/*" in allowed_resources
+
+
     def receive_request(self, client_socket):
-        """
-        Receive an HTTP request from a client socket.
-
-        Args:
-            client_socket (socket): The client socket object.
-
-        Returns:
-            str: The received HTTP request as a string.
-        """
         request = ""
         try:
             while True:
@@ -494,7 +520,20 @@ class ModernHTTPServerGUI:
             url_parts = urllib.parse.urlparse(path)
             query_params = urllib.parse.parse_qs(url_parts.query)
             path = url_parts.path
-
+            headers = {}
+            for line in lines[1:]:
+                if ": " in line:
+                    key, value = line.split(": ", 1)
+                    headers[key] = value
+            if method in ["POST", "PUT", "DELETE"]:
+                is_authenticated, role = self.validate_auth(headers)
+                if not is_authenticated:
+                    self.backend_log_message("(generate_response): Authentication failed.")
+                    return self.build_response(401, "Unauthorized", "text/plain")
+                
+                if not self.check_permissions(role, path, method):
+                    self.backend_log_message("(generate_response): Authorization failed.")
+                    return self.build_response(403, "Forbidden", "text/plain")
             # Handle GET requests
             if method == "GET":
                 if path.startswith('/download'):
@@ -593,6 +632,8 @@ class ModernHTTPServerGUI:
             400: "Bad Request",
             404: "Not Found",
             405: "Method Not Allowed",
+            401: "Unauthorized",
+            403: "Forbidden",
             500: "Internal Server Error"
         }
         status_message = status_messages.get(status_code, "Error")
